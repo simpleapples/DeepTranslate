@@ -50,10 +50,6 @@ struct TranslateWidgetEntryView: View {
     
     var body: some View {
         ZStack {
-            // 背景色 - 使用Google翻译相似的背景色
-//            Color(UIColor.systemBackground)
-//                .edgesIgnoringSafeArea(.all)
-            
             VStack(spacing: 0) {
                 // 输入框区域和按钮一行
                 HStack(spacing: 8) {
@@ -61,12 +57,11 @@ struct TranslateWidgetEntryView: View {
                     Link(destination: URL(string: "deeptranslate://open")!) {
                         HStack(spacing: 4) {
                             // 翻译图标
-                            Image(systemName: "character.book.closed")
+                            Image(systemName: "globe")
                                 .font(.system(size: 16))
                                 .foregroundColor(.blue)
                                 .frame(width: 30, height: 30)
                                 
-                            
                             // 语言选择
                             HStack(spacing: 4) {
                                 Text("中文")

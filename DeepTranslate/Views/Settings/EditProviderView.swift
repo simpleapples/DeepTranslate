@@ -51,12 +51,6 @@ struct EditProviderView: View {
     var body: some View {
         NavigationView {
             Form {
-//                Section("服务商ID") {
-//                    Text(provider.id.uuidString)
-//                        .font(.caption)
-//                        .foregroundColor(.gray)
-//                }
-                
                 Section(header: Text("基本信息")) {
                     TextField("名称", text: $name)
                         .autocapitalization(.none)
@@ -188,6 +182,7 @@ struct EditProviderView: View {
                 Button("取消", role: .cancel) { }
                 Button("删除", role: .destructive) {
                     onDelete()
+                    dismiss()
                 }
             } message: {
                 Text("您确定要删除此服务提供商吗？此操作无法撤销。")
