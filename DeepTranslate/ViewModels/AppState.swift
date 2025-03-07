@@ -15,6 +15,8 @@ class AppState: ObservableObject {
         }
     }
     
+    @Published var selectedTab: Int = 0
+    
     @Published var selectedProviderIndex: Int {
         didSet {
             UserDefaults.standard.set(selectedProviderIndex, forKey: "selectedProviderIndex")

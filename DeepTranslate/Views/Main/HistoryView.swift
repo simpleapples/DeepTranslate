@@ -11,7 +11,6 @@ struct HistoryView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var translationService: TranslationService
     @State private var selectedResult: TranslationResult?
-    @State private var showDetail = false
     @State private var searchText = ""
     
     var filteredHistory: [TranslationResult] {
@@ -93,7 +92,6 @@ struct HistoryView: View {
                                 ForEach(filteredHistory) { result in
                                     Button(action: {
                                         selectedResult = result
-                                        showDetail = true
                                     }) {
                                         VStack(alignment: .leading, spacing: 12) {
                                             HStack(alignment: .top) {
@@ -163,10 +161,8 @@ struct HistoryView: View {
                     .disabled(appState.translationHistory.isEmpty)
                 }
             }
-            .sheet(isPresented: $showDetail) {
-                if let result = selectedResult {
-                    TranslationDetailView(result: result)
-                }
+            .sheet(item: $selectedResult) { result in
+                TranslationDetailView(result: result)
             }
         }
     }

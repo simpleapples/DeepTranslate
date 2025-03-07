@@ -58,7 +58,7 @@ struct TranslateWidgetEntryView: View {
                 // 输入框区域和按钮一行
                 HStack(spacing: 8) {
                     // 输入框（包含语言选择）
-                    Link(destination: URL(string: "translateapp://open")!) {
+                    Link(destination: URL(string: "deeptranslate://open")!) {
                         HStack(spacing: 4) {
                             // 翻译图标
                             Image(systemName: "character.book.closed")
@@ -92,7 +92,7 @@ struct TranslateWidgetEntryView: View {
                     }
                     
                     // 剪贴板按钮
-                    Link(destination: URL(string: "translateapp://paste")!) {
+                    Link(destination: URL(string: "deeptranslate://paste")!) {
                         Image(systemName: "doc.on.clipboard")
                             .font(.system(size: 18))
                             .foregroundColor(Color(UIColor.gray))
@@ -109,7 +109,7 @@ struct TranslateWidgetEntryView: View {
                 if widgetFamily != .systemSmall {
                     HStack(spacing: 6) {
                         // 历史按钮
-                        Link(destination: URL(string: "translateapp://history")!) {
+                        Link(destination: URL(string: "deeptranslate://history")!) {
                             VStack(spacing: 6) {
                                 Image(systemName: "clock.arrow.circlepath")
                                     .font(.system(size: 16))
@@ -128,7 +128,7 @@ struct TranslateWidgetEntryView: View {
                         Spacer()
                         
                         // 设置按钮
-                        Link(destination: URL(string: "translateapp://settings")!) {
+                        Link(destination: URL(string: "deeptranslate://settings")!) {
                             VStack(spacing: 6) {
                                 Image(systemName: "gearshape")
                                     .font(.system(size: 16))

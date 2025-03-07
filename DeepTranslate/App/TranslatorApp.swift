@@ -18,6 +18,23 @@ struct TranslatorApp: App {
                 .environmentObject(appState)
                 .environmentObject(translationService)
                 .preferredColorScheme(.light) // 默认使用浅色模式，但也支持暗色模式
+                .onOpenURL { url in
+                    guard let host = url.host else { return }
+                    
+                    // 根据URL的host切换Tab
+                    switch host {
+                    case "open":
+                        appState.selectedTab = 0
+                    case "paste":
+                        appState.selectedTab = 0
+                    case "settings":
+                        appState.selectedTab = 2
+                    case "history":
+                        appState.selectedTab = 1
+                    default:
+                        appState.selectedTab = 0
+                    }
+                }
                 .onAppear {
                     // 设置全局UI样式
                     let appearance = UITabBarAppearance()
