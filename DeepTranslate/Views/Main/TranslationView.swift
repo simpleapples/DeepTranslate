@@ -1,10 +1,3 @@
-//
-//  TranslationView.swift
-//  DeepTranslate
-//
-//  Created by Zzy on 04/03/2025.
-//
-
 import SwiftUI
 
 struct TranslationView: View {
@@ -14,17 +7,20 @@ struct TranslationView: View {
     // 文本和翻译状态
     @State private var sourceText = ""
     @State private var translatedText = ""
-    @State private var sourceLanguage = Language.supportedLanguages[0]
-    @State private var targetLanguage = Language.supportedLanguages[1]
+    
+    @Binding var sourceLanguage: Language
+    @Binding var targetLanguage: Language
     
     // UI 状态
-    @State private var isRecording = false
     @State private var error: String?
     @State private var showingLanguageSelector = false
     @State private var selectingSource = true
     @State private var isEditing = false
     @State private var showingSettingsView = false
     @State private var showingHistoryView = false
+    
+    // 添加FocusState来管理输入框焦点
+    @FocusState private var isInputFocused: Bool
     
     // 语言检测相关
     @State private var detectedLanguage: Language? = nil
@@ -91,7 +87,6 @@ struct TranslationView: View {
                                 Text(targetLanguage.name)
                                     .font(.system(size: 16))
                                     .fontWeight(.semibold)
-//                                    .foregroundColor(.white)
                                 
                                 Image(systemName: "chevron.down")
                                     .font(.subheadline)
@@ -105,7 +100,6 @@ struct TranslationView: View {
                         }
                     }
                     .padding(.horizontal)
-//                    .padding(.top, 2)
                     
                     ScrollView {
                         VStack(spacing: 20) {
@@ -135,27 +129,34 @@ struct TranslationView: View {
                                 .padding(.horizontal)
                                 .padding(.vertical, 10)
                                 
+                                // 输入框和占位符
+                                // 输入区域 - 让光标可见但保持占位文本功能
                                 ZStack(alignment: .topLeading) {
-                                    if sourceText.isEmpty {
-                                        Text("输入文本...")
-                                            .padding(.horizontal)
-                                            .padding(.top, 8)
-                                    }
-                                    
                                     TextEditor(text: $sourceText)
-                                        .font(.system(size: 18))
-                                        .background(Color.clear)
-                                        .frame(minHeight: 100)
                                         .padding(.horizontal)
+                                        .frame(height: 100)
+                                        .background(Color.clear)
+                                        .font(.system(size: 18))
+                                        .focused($isInputFocused)
                                         .onChange(of: sourceText) { newValue in
                                             handleTextChange(newValue)
                                         }
-                                        .onTapGesture {
-                                            isEditing = true
-                                        }
+                                    
+                                    if sourceText.isEmpty && !isInputFocused {
+                                        Text("输入文本...")
+                                            .foregroundColor(.gray)
+                                            .padding(.horizontal)
+                                            .padding(.top, 8)
+                                            .allowsHitTesting(false) // 允许点击穿透到下层TextEditor
+                                    }
                                 }
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+    UIApplication.shared.sendAction(#selector(UIResponder.becomeFirstResponder), to: nil, from: nil, for: nil)
+    isInputFocused = true
+}
                                 
-                                // 工具栏
+                                // 工具栏 - 不包含在可点击区域内
                                 HStack(spacing: 20) {
                                     if !sourceText.isEmpty {
                                         Button(action: {
@@ -182,15 +183,6 @@ struct TranslationView: View {
                                         Image(systemName: autoDetectLanguage ? "text.magnifyingglass" : "slash.circle")
                                             .font(.system(size: 20))
                                             .foregroundColor(autoDetectLanguage ? .blue : .gray)
-                                    }
-                                    
-                                    // 语音输入按钮
-                                    Button(action: {
-                                        handleVoiceInput()
-                                    }) {
-                                        Image(systemName: isRecording ? "mic.fill" : "mic")
-                                            .font(.system(size: 20))
-                                            .foregroundColor(isRecording ? .red : .blue)
                                     }
                                     
                                     // 朗读按钮
@@ -354,12 +346,11 @@ struct TranslationView: View {
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    
                     Button("完成") {
                         hideKeyboard()
                         isEditing = false
+                        isInputFocused = false
                     }
-                    .foregroundColor(.blue)
                 }
             }
         }
@@ -398,7 +389,6 @@ struct TranslationView: View {
         .sheet(isPresented: $showingHistoryView) {
             HistoryView()
         }
-//        .preferredColorScheme(.dark)
     }
     
     // MARK: - 文本变化处理
@@ -484,6 +474,15 @@ struct TranslationView: View {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
     
+    // 添加一个方法来处理文本编辑的开始
+    private func activateInput() {
+        // 使用延迟来避免可能的布局冲突
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            isInputFocused = true
+            isEditing = true
+        }
+    }
+    
     private func clearSourceText() {
         sourceText = ""
         translatedText = ""
@@ -501,23 +500,6 @@ struct TranslationView: View {
             let tempText = sourceText
             sourceText = translatedText
             translatedText = tempText
-        }
-    }
-    
-    private func handleVoiceInput() {
-        isRecording.toggle()
-        if isRecording {
-            Task {
-                if let recognizedText = await translationService.startSpeechRecognition(language: sourceLanguage) {
-                    sourceText = recognizedText
-                    isRecording = false
-                    
-                    // 语音识别后尝试检测语言
-                    if autoDetectLanguage && !recognizedText.isEmpty && recognizedText.count >= 5 {
-                        handleTextChange(recognizedText)
-                    }
-                }
-            }
         }
     }
     
@@ -547,6 +529,8 @@ struct TranslationView: View {
     private func translateText() {
         // 隐藏键盘
         hideKeyboard()
+        isInputFocused = false
+        isEditing = false
         
         // 在翻译前检测语言并应用
         if autoDetectLanguage && !sourceText.isEmpty && showDetectedLanguage {
@@ -599,10 +583,4 @@ struct TranslationView: View {
         // 触发翻译
         translateText()
     }
-}
-
-#Preview {
-    TranslationView()
-        .environmentObject(AppState())
-        .environmentObject(TranslationService())
 }

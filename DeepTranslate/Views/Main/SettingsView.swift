@@ -11,7 +11,6 @@ struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
     @State private var showAddProvider = false
     @State private var editingProvider: LLMProvider? = nil
-    @State private var appearance: String = UserDefaults.standard.string(forKey: "appearance") ?? "系统"
     @AppStorage("autoDetectLanguage") private var autoDetectLanguage = true
     
     let appearanceOptions = ["浅色", "深色", "系统"]
@@ -70,35 +69,6 @@ struct SettingsView: View {
                                 .padding(.horizontal)
                             
                             VStack(spacing: 0) {
-                                // 外观设置
-                                HStack {
-                                    Image(systemName: "paintbrush")
-                                        .frame(width: 30)
-                                        .foregroundColor(AppColors.accent)
-                                    
-                                    Text("外观模式")
-                                    
-                                    Spacer()
-                                    
-                                    Picker("外观", selection: $appearance) {
-                                        ForEach(appearanceOptions, id: \.self) {
-                                            Text($0)
-                                        }
-                                    }
-                                    .pickerStyle(MenuPickerStyle())
-                                    .onChange(of: appearance) { _ in
-                                        UserDefaults.standard.set(appearance, forKey: "appearance")
-                                        updateAppearance()
-                                    }
-                                }
-                                .padding()
-                                .background(AppColors.cardBackground)
-                                .cornerRadius(12, corners: [.topLeft, .topRight])
-                                
-                                Divider()
-                                    .padding(.leading, 60)
-                                    .opacity(0.5)
-                                
                                 // 自动检测语言开关
                                 Toggle(isOn: $autoDetectLanguage) {
                                     HStack {
@@ -117,7 +87,7 @@ struct SettingsView: View {
                                 }
                                 .padding()
                                 .background(AppColors.cardBackground)
-                                .cornerRadius(12, corners: [.bottomLeft, .bottomRight])
+                                .cornerRadius(12)
                                 .tint(AppColors.accent)
                             }
                             .padding(.horizontal)
@@ -308,20 +278,6 @@ struct SettingsView: View {
             // 检查设备是否可以打开URL
             if UIApplication.shared.canOpenURL(url) {
                 UIApplication.shared.open(url)
-            }
-        }
-    }
-    
-    private func updateAppearance() {
-        let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
-        if let window = windowScene?.windows.first {
-            switch appearance {
-            case "浅色":
-                window.overrideUserInterfaceStyle = .light
-            case "深色":
-                window.overrideUserInterfaceStyle = .dark
-            default:
-                window.overrideUserInterfaceStyle = .unspecified
             }
         }
     }

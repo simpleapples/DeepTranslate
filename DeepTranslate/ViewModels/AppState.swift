@@ -19,7 +19,32 @@ class AppState: ObservableObject {
     
     @Published var selectedProviderIndex: Int {
         didSet {
-            UserDefaults.standard.set(selectedProviderIndex, forKey: "selectedProviderIndex")
+            let defaults = UserDefaults(suiteName: "group.simpleapples.deeptranslate")
+            if let defaults = defaults {
+                defaults.set(selectedProviderIndex, forKey: "selectedProviderIndex")
+            }
+        }
+    }
+    
+    @Published var sourceLanguage: Language {
+        didSet {
+            if let encoded = try? JSONEncoder().encode(sourceLanguage) {
+                let defaults = UserDefaults(suiteName: "group.simpleapples.deeptranslate")
+                if let defaults = defaults {
+                    defaults.set(encoded, forKey: "sourceLanguage")
+                }
+            }
+        }
+    }
+    
+    @Published var targetLanguage: Language {
+        didSet {
+            if let encoded = try? JSONEncoder().encode(targetLanguage) {
+                let defaults = UserDefaults(suiteName: "group.simpleapples.deeptranslate")
+                if let defaults = defaults {
+                    defaults.set(encoded, forKey: "targetLanguage")
+                }
+            }
         }
     }
     
@@ -32,32 +57,67 @@ class AppState: ObservableObject {
     // 添加自动语言检测设置
     @Published var autoDetectLanguage: Bool {
         didSet {
-            UserDefaults.standard.set(autoDetectLanguage, forKey: "autoDetectLanguage")
+            let defaults = UserDefaults(suiteName: "group.simpleapples.deeptranslate")
+            if let defaults = defaults {
+                defaults.set(autoDetectLanguage, forKey: "autoDetectLanguage")
+            }
         }
     }
     
     init() {
-        // 从UserDefaults加载提供商配置
-        if let savedData = UserDefaults.standard.data(forKey: "llmProviders"),
-           let decodedProviders = try? JSONDecoder().decode([LLMProvider].self, from: savedData) {
-            self.providers = decodedProviders
+        let defaults = UserDefaults(suiteName: "group.simpleapples.deeptranslate")
+        if let defaults = defaults {
+            // 从UserDefaults加载提供商配置
+            if let savedData = defaults.data(forKey: "llmProviders"),
+               let decodedProviders = try? JSONDecoder().decode([LLMProvider].self, from: savedData) {
+                self.providers = decodedProviders
+            } else {
+                self.providers = LLMProvider.defaultProviders
+            }
+            
+            // 从UserDefaults加载源语言
+            if let savedData = defaults.data(forKey: "sourceLanguage"),
+               let decodedLanguage = try? JSONDecoder().decode(Language.self, from: savedData) {
+                self.sourceLanguage = decodedLanguage
+            } else {
+                self.sourceLanguage = Language.supportedLanguages[0]
+            }
+            
+            // 从UserDefaults加载目标语言
+            if let savedData = defaults.data(forKey: "targetLanguage"),
+               let decodedLanguage = try? JSONDecoder().decode(Language.self, from: savedData) {
+                self.targetLanguage = decodedLanguage
+            } else {
+                self.targetLanguage = Language.supportedLanguages[1]
+            }
+            
+            // 加载选中的提供商索引
+            self.selectedProviderIndex = defaults.integer(forKey: "selectedProviderIndex")
+            
+            // 加载自动语言检测设置
+            self.autoDetectLanguage = defaults.bool(forKey: "autoDetectLanguage", defaultValue: true)
+            
+            // 加载历史记录
+            if let data = defaults.data(forKey: "translationHistory") {
+                do {
+                    let decoder = JSONDecoder()
+                    translationHistory = try decoder.decode([TranslationResult].self, from: data)
+                } catch {
+                    print("加载历史记录失败: \(error.localizedDescription)")
+                }
+            }
         } else {
             self.providers = LLMProvider.defaultProviders
+            self.selectedProviderIndex = 0
+            self.autoDetectLanguage = true
+            self.sourceLanguage = Language.supportedLanguages[0]
+            self.targetLanguage = Language.supportedLanguages[1]
         }
-        
-        // 加载选中的提供商索引
-        self.selectedProviderIndex = UserDefaults.standard.integer(forKey: "selectedProviderIndex")
-        
-        // 确保索引有效
-//        if self.selectedProviderIndex >= self.providers.count {
-//            self.selectedProviderIndex = 0
-//        }
-        
-        // 加载自动语言检测设置
-        self.autoDetectLanguage = UserDefaults.standard.bool(forKey: "autoDetectLanguage", defaultValue: true)
-        
-        // 加载历史记录
-        loadHistory()
+    }
+    
+    // 获取共享 UserDefaults
+    public func getSharedUserDefaults() -> UserDefaults {
+        return UserDefaults(suiteName: "group.simpleapples.deeptranslate") ?? .standard
     }
     
     // 获取当前活跃的提供商
@@ -101,7 +161,10 @@ class AppState: ObservableObject {
     // 保存提供商配置到UserDefaults
     private func saveProviders() {
         if let encoded = try? JSONEncoder().encode(providers) {
-            UserDefaults.standard.set(encoded, forKey: "llmProviders")
+            let defaults = UserDefaults(suiteName: "group.simpleapples.deeptranslate")
+            if let defaults = defaults {
+                defaults.set(encoded, forKey: "llmProviders")
+            }
         }
     }
     
@@ -127,7 +190,10 @@ class AppState: ObservableObject {
         do {
             let encoder = JSONEncoder()
             let data = try encoder.encode(translationHistory)
-            UserDefaults.standard.set(data, forKey: "translationHistory")
+            let defaults = UserDefaults(suiteName: "group.simpleapples.deeptranslate")
+            if let defaults = defaults {
+                defaults.set(data, forKey: "translationHistory")
+            }
         } catch {
             print("保存历史记录失败: \(error.localizedDescription)")
         }
@@ -135,14 +201,7 @@ class AppState: ObservableObject {
     
     // 加载历史记录
     private func loadHistory() {
-        if let data = UserDefaults.standard.data(forKey: "translationHistory") {
-            do {
-                let decoder = JSONDecoder()
-                translationHistory = try decoder.decode([TranslationResult].self, from: data)
-            } catch {
-                print("加载历史记录失败: \(error.localizedDescription)")
-            }
-        }
+        
     }
 }
 

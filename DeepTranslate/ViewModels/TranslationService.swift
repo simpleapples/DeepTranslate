@@ -13,7 +13,6 @@ class TranslationService: NSObject, ObservableObject, AVSpeechSynthesizerDelegat
     @Published var isTranslating = false
     @Published var isSpeaking = false
     
-    private let speechRecognizer = SpeechRecognizer()
     private let speechSynthesizer = AVSpeechSynthesizer()
     
     override init() {
@@ -380,11 +379,6 @@ class TranslationService: NSObject, ObservableObject, AVSpeechSynthesizerDelegat
         }
         
         return responseString.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-    
-    // 语音识别
-    func startSpeechRecognition(language: Language) async -> String? {
-        return await speechRecognizer.startRecording(languageCode: language.code)
     }
     
     // 文本转语音

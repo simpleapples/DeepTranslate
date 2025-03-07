@@ -13,7 +13,7 @@ struct ContentView: View {
     
     var body: some View {
         TabView(selection: $appState.selectedTab) {
-            TranslationView()
+            TranslationView(sourceLanguage: $appState.sourceLanguage, targetLanguage: $appState.targetLanguage)
                 .tabItem {
                     Image(systemName: "globe")
                     Text("翻译")

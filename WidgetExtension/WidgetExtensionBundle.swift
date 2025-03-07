@@ -6,9 +6,26 @@
 //
 
 
+//
+//  WidgetExtensionBundle.swift
+//  WidgetExtension
+//
+//  Created by Zzy on 04/03/2025.
+//
+
+
+//
+//  WidgetExtensionBundle.swift
+//  WidgetExtension
+//
+//  Created by Zzy on 04/03/2025.
+//
+
+
 import WidgetKit
 import SwiftUI
 import Intents
+
 
 // MARK: - Widget入口点
 @main
@@ -20,25 +37,71 @@ struct WidgetExtension: WidgetBundle {
 
 // MARK: - Widget提供者
 struct TranslateWidgetProvider: TimelineProvider {
+    // 创建共享的UserDefaults
+    let sharedUserDefaults = UserDefaults(suiteName: "group.simpleapples.deeptranslate")
+    
+    // 默认语言
+    let defaultSourceLanguage = Language.supportedLanguages[0]
+    let defaultTargetLanguage = Language.supportedLanguages[1]
+    
     func placeholder(in context: Context) -> TranslateWidgetEntry {
-        TranslateWidgetEntry(date: Date())
+        // 使用默认值
+        TranslateWidgetEntry(
+            date: Date(),
+            sourceLanguage: defaultSourceLanguage,
+            targetLanguage: defaultTargetLanguage
+        )
     }
 
     func getSnapshot(in context: Context, completion: @escaping (TranslateWidgetEntry) -> ()) {
-        let entry = TranslateWidgetEntry(date: Date())
+        let entry = getEntry()
         completion(entry)
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<TranslateWidgetEntry>) -> ()) {
-        let entry = TranslateWidgetEntry(date: Date())
-        let timeline = Timeline(entries: [entry], policy: .atEnd)
+        let entry = getEntry()
+        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 5, to: Date())!
+        let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
         completion(timeline)
+    }
+    
+    // 从App Group的UserDefaults中读取语言设置
+    private func getEntry() -> TranslateWidgetEntry {
+        var sourceLanguage = defaultSourceLanguage
+        var targetLanguage = defaultTargetLanguage
+        
+        // 从UserDefaults读取数据并解码
+        if let sourceData = sharedUserDefaults?.data(forKey: "sourceLanguage") {
+            do {
+                let decodedSource = try JSONDecoder().decode(Language.self, from: sourceData)
+                sourceLanguage = decodedSource
+            } catch {
+                print("Error decoding sourceLanguage: \(error)")
+            }
+        }
+        
+        if let targetData = sharedUserDefaults?.data(forKey: "targetLanguage") {
+            do {
+                let decodedTarget = try JSONDecoder().decode(Language.self, from: targetData)
+                targetLanguage = decodedTarget
+            } catch {
+                print("Error decoding targetLanguage: \(error)")
+            }
+        }
+        
+        return TranslateWidgetEntry(
+            date: Date(),
+            sourceLanguage: sourceLanguage,
+            targetLanguage: targetLanguage
+        )
     }
 }
 
 // MARK: - Widget条目
 struct TranslateWidgetEntry: TimelineEntry {
     let date: Date
+    let sourceLanguage: Language
+    let targetLanguage: Language
 }
 
 
@@ -62,19 +125,25 @@ struct TranslateWidgetEntryView: View {
                                 .foregroundColor(.blue)
                                 .frame(width: 30, height: 30)
                                 
-                            // 语言选择
+                            // 语言选择 - 使用从UserDefaults读取的Language对象
                             HStack(spacing: 4) {
-                                Text("中文")
-                                    .font(.subheadline)
-                                    .foregroundColor(Color(UIColor.secondaryLabel))
+                                // 源语言显示
+                                HStack(spacing: 2) {
+                                    Text(entry.sourceLanguage.name)
+                                        .font(.subheadline)
+                                        .foregroundColor(Color(UIColor.secondaryLabel))
+                                }
                                 
                                 Image(systemName: "arrow.right")
                                     .font(.caption)
                                     .foregroundColor(Color(UIColor.secondaryLabel))
                                 
-                                Text("英文")
-                                    .font(.subheadline)
-                                    .foregroundColor(Color(UIColor.secondaryLabel))
+                                // 目标语言显示
+                                HStack(spacing: 2) {
+                                    Text(entry.targetLanguage.name)
+                                        .font(.subheadline)
+                                        .foregroundColor(Color(UIColor.secondaryLabel))
+                                }
                             }
                             
                             Spacer()
@@ -160,27 +229,8 @@ struct TranslateWidget: Widget {
         StaticConfiguration(kind: kind, provider: TranslateWidgetProvider()) { entry in
             TranslateWidgetEntryView(entry: entry)
         }
-        .configurationDisplayName("翻译小工具")
-        .description("快速翻译文本和剪贴板内容")
-        .supportedFamilies([.systemSmall, .systemMedium])
-    }
-}
-
-// MARK: - 预览
-struct TranslateWidget_Previews: PreviewProvider {
-    static var previews: some View {
-        Group {
-            TranslateWidgetEntryView(entry: TranslateWidgetEntry(date: Date()))
-                .previewContext(WidgetPreviewContext(family: .systemSmall))
-                .environment(\.colorScheme, .light)
-            
-            TranslateWidgetEntryView(entry: TranslateWidgetEntry(date: Date()))
-                .previewContext(WidgetPreviewContext(family: .systemMedium))
-                .environment(\.colorScheme, .light)
-            
-            TranslateWidgetEntryView(entry: TranslateWidgetEntry(date: Date()))
-                .previewContext(WidgetPreviewContext(family: .systemMedium))
-                .environment(\.colorScheme, .dark)
-        }
+        .configurationDisplayName("DeepTranslate")
+        .description("快速翻译文本")
+        .supportedFamilies([.systemMedium])
     }
 }
