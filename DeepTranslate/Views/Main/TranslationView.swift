@@ -1,3 +1,10 @@
+//
+//  TranslationView.swift
+//  DeepTranslate
+//
+//  Created by Zzy on 04/03/2025.
+//
+
 import SwiftUI
 
 struct TranslationView: View {
@@ -18,6 +25,9 @@ struct TranslationView: View {
     @State private var isEditing = false
     @State private var showingSettingsView = false
     @State private var showingHistoryView = false
+    
+    // 朗读源控制 - 跟踪哪个文本在朗读
+    @State private var speakingSource = false // true = 源文本朗读, false = 目标文本朗读
     
     // 添加FocusState来管理输入框焦点
     @FocusState private var isInputFocused: Bool
@@ -152,9 +162,9 @@ struct TranslationView: View {
                                 }
                                 .contentShape(Rectangle())
                                 .onTapGesture {
-    UIApplication.shared.sendAction(#selector(UIResponder.becomeFirstResponder), to: nil, from: nil, for: nil)
-    isInputFocused = true
-}
+                                    UIApplication.shared.sendAction(#selector(UIResponder.becomeFirstResponder), to: nil, from: nil, for: nil)
+                                    isInputFocused = true
+                                }
                                 
                                 // 工具栏 - 不包含在可点击区域内
                                 HStack(spacing: 20) {
@@ -185,13 +195,13 @@ struct TranslationView: View {
                                             .foregroundColor(autoDetectLanguage ? .blue : .gray)
                                     }
                                     
-                                    // 朗读按钮
+                                    // 朗读按钮 - 源文本
                                     Button(action: {
                                         if !sourceText.isEmpty {
-                                            toggleSpeaking(text: sourceText, language: sourceLanguage)
+                                            toggleSourceSpeaking()
                                         }
                                     }) {
-                                        Image(systemName: translationService.isSpeaking ? "speaker.wave.2.fill" : "speaker.wave.2")
+                                        Image(systemName: translationService.isSpeaking && speakingSource ? "speaker.wave.2.fill" : "speaker.wave.2")
                                             .font(.system(size: 20))
                                             .foregroundColor(.blue)
                                     }
@@ -321,10 +331,11 @@ struct TranslationView: View {
                                         
                                         Spacer()
                                         
+                                        // 朗读按钮 - 目标文本
                                         Button(action: {
-                                            toggleSpeaking(text: translatedText, language: targetLanguage)
+                                            toggleTargetSpeaking()
                                         }) {
-                                            Image(systemName: translationService.isSpeaking ? "speaker.wave.2.fill" : "speaker.wave.2")
+                                            Image(systemName: translationService.isSpeaking && !speakingSource ? "speaker.wave.2.fill" : "speaker.wave.2")
                                                 .font(.system(size: 20))
                                                 .foregroundColor(.blue)
                                                 .padding(10)
@@ -376,6 +387,11 @@ struct TranslationView: View {
             // 取消任何正在进行的任务
             textChangeTask?.cancel()
             textChangeTask = nil
+            
+            // 确保停止朗读
+            if translationService.isSpeaking {
+                translationService.stopSpeaking()
+            }
         }
         .sheet(isPresented: $showingLanguageSelector) {
             LanguageSelectorView(
@@ -388,6 +404,40 @@ struct TranslationView: View {
         }
         .sheet(isPresented: $showingHistoryView) {
             HistoryView()
+        }
+    }
+    
+    // MARK: - 朗读功能
+    
+    // 源文本朗读切换
+    private func toggleSourceSpeaking() {
+        if translationService.isSpeaking && speakingSource {
+            // 如果源文本正在朗读，停止它
+            translationService.stopSpeaking()
+        } else {
+            // 停止任何正在进行的朗读
+            if translationService.isSpeaking {
+                translationService.stopSpeaking()
+            }
+            // 开始朗读源文本并标记
+            speakingSource = true
+            translationService.speak(text: sourceText, language: sourceLanguage)
+        }
+    }
+    
+    // 目标文本朗读切换
+    private func toggleTargetSpeaking() {
+        if translationService.isSpeaking && !speakingSource {
+            // 如果目标文本正在朗读，停止它
+            translationService.stopSpeaking()
+        } else {
+            // 停止任何正在进行的朗读
+            if translationService.isSpeaking {
+                translationService.stopSpeaking()
+            }
+            // 开始朗读目标文本并标记
+            speakingSource = false
+            translationService.speak(text: translatedText, language: targetLanguage)
         }
     }
     
@@ -484,6 +534,11 @@ struct TranslationView: View {
     }
     
     private func clearSourceText() {
+        // 如果正在朗读，停止朗读
+        if translationService.isSpeaking {
+            translationService.stopSpeaking()
+        }
+        
         sourceText = ""
         translatedText = ""
         error = nil
@@ -492,6 +547,11 @@ struct TranslationView: View {
     }
     
     private func swapLanguages() {
+        // 如果正在朗读，停止朗读
+        if translationService.isSpeaking {
+            translationService.stopSpeaking()
+        }
+        
         let temp = sourceLanguage
         sourceLanguage = targetLanguage
         targetLanguage = temp
@@ -500,14 +560,6 @@ struct TranslationView: View {
             let tempText = sourceText
             sourceText = translatedText
             translatedText = tempText
-        }
-    }
-    
-    private func toggleSpeaking(text: String, language: Language) {
-        if translationService.isSpeaking {
-            translationService.stopSpeaking()
-        } else {
-            translationService.speak(text: text, language: language)
         }
     }
     
