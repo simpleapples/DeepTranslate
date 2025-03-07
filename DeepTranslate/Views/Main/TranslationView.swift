@@ -42,17 +42,6 @@ struct TranslationView: View {
                 AppColors.background.edgesIgnoringSafeArea(.all)
                 
                 VStack(spacing: 0) {
-                    // 标题与控制按钮
-//                    HStack {
-//                        Text("DeepTranslate")
-//                            .font(.title)
-//                            .fontWeight(.bold)
-//                            .foregroundColor(AppColors.accent)
-//                        Spacer()
-//                    }
-//                    .padding(.horizontal)
-//                    .padding(.top)
-                    
                     // 语言选择区域
                     HStack(spacing: 0) {
                         // 源语言选择
@@ -64,7 +53,6 @@ struct TranslationView: View {
                                 Text(sourceLanguage.name)
                                     .font(.system(size: 16))
                                     .fontWeight(.semibold)
-//                                    .foregroundColor(.white)
                                 
                                 Image(systemName: "chevron.down")
                                     .font(.subheadline)
@@ -296,14 +284,6 @@ struct TranslationView: View {
                                             .foregroundColor(.white)
                                             .cornerRadius(12)
                                     }
-                                    
-//                                    Button(action: {
-//                                        showDetectedLanguage = false
-//                                    }) {
-//                                        Image(systemName: "xmark.circle.fill")
-//                                            .foregroundColor(AppColors.cardBackground)
-//                                    }
-//                                    .padding(.leading, 8)
                                 }
                                 .padding()
                                 .background(AppColors.cardBackground)

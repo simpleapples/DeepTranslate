@@ -15,6 +15,12 @@ struct SettingsView: View {
     @AppStorage("autoDetectLanguage") private var autoDetectLanguage = true
     
     let appearanceOptions = ["浅色", "深色", "系统"]
+    let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    // 获取应用构建号
+    let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+    
+    // 开发者邮箱
+    let developerEmail = "zangzhiya@gmail.com"
     
     var body: some View {
         NavigationView {
@@ -125,29 +131,8 @@ struct SettingsView: View {
                                 .padding(.horizontal)
                             
                             VStack(spacing: 0) {
-                                // 版本信息
-                                HStack {
-                                    Image(systemName: "info.circle")
-                                        .frame(width: 30)
-                                        .foregroundColor(AppColors.accent)
-                                    
-                                    Text("版本")
-                                    
-                                    Spacer()
-                                    
-                                    Text("1.0.0")
-                                        .foregroundColor(AppColors.textSecondary)
-                                }
-                                .padding()
-                                .background(AppColors.cardBackground)
-                                .cornerRadius(12, corners: [.topLeft, .topRight])
-                                
-                                Divider()
-                                    .padding(.leading, 60)
-                                    .opacity(0.5)
-                                
                                 // 源代码
-                                Link(destination: URL(string: "https://github.com")!) {
+                                Link(destination: URL(string: "https://github.com/simpleapples/DeepTranslate")!) {
                                     HStack {
                                         Image(systemName: "chevron.left.forwardslash.chevron.right")
                                             .frame(width: 30)
@@ -163,6 +148,7 @@ struct SettingsView: View {
                                 }
                                 .padding()
                                 .background(AppColors.cardBackground)
+                                .cornerRadius(12, corners: [.topLeft, .topRight])
                                 
                                 Divider()
                                     .padding(.leading, 60)
@@ -172,32 +158,101 @@ struct SettingsView: View {
                                 NavigationLink(
                                     destination:
                                         ScrollView {
-                                            VStack(alignment: .leading, spacing: 16) {
-                                                Text("AI翻译")
-                                                    .font(.title.bold())
+                                            VStack(spacing: 30) {
+                                                // 应用logo - 使用AppIcon
+                                                Group {
+                                                    // 尝试从Info.plist获取应用图标
+                                                    if let iconsDictionary = Bundle.main.infoDictionary?["CFBundleIcons"] as? [String: Any],
+                                                       let primaryIconsDictionary = iconsDictionary["CFBundlePrimaryIcon"] as? [String: Any],
+                                                       let iconFiles = primaryIconsDictionary["CFBundleIconFiles"] as? [String],
+                                                       let lastIcon = iconFiles.last {
+                                                        Image(uiImage: UIImage(named: lastIcon) ?? UIImage())
+                                                            .resizable()
+                                                            .scaledToFit()
+                                                    } else {
+                                                        // 备选方案：直接尝试使用"AppIcon"
+                                                        Image(uiImage: UIImage(named: "AppIcon") ?? UIImage(systemName: "text.bubble.fill")!)
+                                                            .resizable()
+                                                            .scaledToFit()
+                                                            .foregroundColor(UIImage(named: "AppIcon") == nil ? .blue : .primary)
+                                                    }
+                                                }
+                                                .frame(width: 100, height: 100)
+                                                .cornerRadius(20)
+                                                .shadow(radius: 5)
+                                                .padding(.top, 40)
+                                                // 确保最大尺寸不超过512px
+                                                .frame(maxWidth: 512, maxHeight: 512)
                                                 
-                                                Text("这是一个类似Apple自带翻译应用的高级实现，支持接入多种LLM模型作为翻译后端，包括OpenAI、DeepSeek、Anthropic等。")
-                                                
-                                                Text("功能特点：")
-                                                    .font(.headline)
-                                                
-                                                VStack(alignment: .leading, spacing: 8) {
-                                                    FeatureRow(icon: "globe", text: "支持多种语言翻译")
-                                                    FeatureRow(icon: "server.rack", text: "支持多种LLM服务提供商")
-                                                    FeatureRow(icon: "text.magnifyingglass", text: "智能语言检测")
-                                                    FeatureRow(icon: "mic", text: "语音输入支持")
-                                                    FeatureRow(icon: "speaker.wave.2", text: "文本朗读功能")
-                                                    FeatureRow(icon: "clock", text: "翻译历史记录")
-                                                    FeatureRow(icon: "key", text: "API密钥安全存储")
+                                                // 应用名称和版本信息
+                                                VStack(spacing: 8) {
+                                                    Text("DeepTranslate")
+                                                        .font(.title)
+                                                        .fontWeight(.bold)
+                                                    
+                                                    Text("版本 \(appVersion) (\(buildNumber))")
+                                                        .font(.subheadline)
+                                                        .foregroundColor(.secondary)
                                                 }
                                                 
-                                                Text("© 2025 AI翻译团队")
+                                                Divider()
+                                                    .padding(.horizontal)
+                                                
+                                                // 联系信息部分
+                                                VStack(alignment: .leading, spacing: 15) {
+                                                    Text("联系与支持")
+                                                        .font(.headline)
+                                                        .padding(.leading)
+                                                    
+                                                    // 邮箱联系卡片
+                                                    Button(action: {
+                                                        sendEmail()
+                                                    }) {
+                                                        HStack {
+                                                            Image(systemName: "envelope.fill")
+                                                                .foregroundColor(.blue)
+                                                                .font(.system(size: 20))
+                                                            
+                                                            VStack(alignment: .leading, spacing: 4) {
+                                                                Text("反馈与建议")
+                                                                    .font(.headline)
+                                                                    .foregroundColor(.primary)
+                                                                
+                                                                Text(developerEmail)
+                                                                    .font(.subheadline)
+                                                                    .foregroundColor(.secondary)
+                                                            }
+                                                            
+                                                            Spacer()
+                                                            
+                                                            Image(systemName: "chevron.right")
+                                                                .foregroundColor(.gray)
+                                                                .font(.footnote)
+                                                        }
+                                                        .padding()
+                                                        .background(Color(.systemBackground))
+                                                        .cornerRadius(10)
+                                                        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+                                                    }
+                                                    .padding(.horizontal)
+                                                    
+                                                    Text("如有任何问题或建议，请随时通过邮件联系我，我会尽快回复。")
+                                                        .font(.subheadline)
+                                                        .foregroundColor(.secondary)
+                                                        .padding(.horizontal)
+                                                }
+                                                
+                                                Spacer()
+                                                
+                                                // 版权信息
+                                                Text("© \(String(Calendar.current.component(.year, from: Date()))) DeepTranslate")
                                                     .font(.footnote)
-                                                    .foregroundColor(AppColors.textSecondary)
+                                                    .foregroundColor(.secondary)
+                                                    .padding(.bottom, 20)
                                             }
                                             .padding()
                                         }
-                                        .navigationTitle("关于应用")
+                                        .navigationTitle("关于")
                                         .navigationBarTitleDisplayMode(.inline)
                                 ) {
                                     HStack {
@@ -244,6 +299,16 @@ struct SettingsView: View {
                     }
                 }
             )
+        }
+    }
+    
+    func sendEmail() {
+        // 创建邮件URL
+        if let url = URL(string: "mailto:\(developerEmail)?subject=[反馈]DeepTranslate") {
+            // 检查设备是否可以打开URL
+            if UIApplication.shared.canOpenURL(url) {
+                UIApplication.shared.open(url)
+            }
         }
     }
     
