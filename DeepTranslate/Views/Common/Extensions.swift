@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-// 角落圆角修饰符
+// Corner radius
 extension View {
     func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
         clipShape(RoundedCorner(radius: radius, corners: corners))
@@ -24,7 +24,7 @@ struct RoundedCorner: Shape {
     }
 }
 
-// 隐藏键盘扩展
+// hide keyboard
 extension UIApplication {
     func hideKeyboard() {
         sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)

@@ -1,21 +1,5 @@
 //
-//  WidgetExtensionBundle.swift
-//  WidgetExtension
-//
-//  Created by Zzy on 04/03/2025.
-//
-
-
-//
-//  WidgetExtensionBundle.swift
-//  WidgetExtension
-//
-//  Created by Zzy on 04/03/2025.
-//
-
-
-//
-//  WidgetExtensionBundle.swift
+//  WidgetExtension.swift
 //  WidgetExtension
 //
 //  Created by Zzy on 04/03/2025.

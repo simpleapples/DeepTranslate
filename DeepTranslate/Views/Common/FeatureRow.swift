@@ -20,12 +20,3 @@ struct FeatureRow: View {
         }
     }
 }
-
-#Preview {
-    VStack(alignment: .leading) {
-        FeatureRow(icon: "globe", text: "支持多种语言翻译")
-        FeatureRow(icon: "server.rack", text: "支持多种服务提供商")
-        FeatureRow(icon: "mic", text: "语音输入支持")
-    }
-    .padding()
-}

@@ -137,6 +137,7 @@ struct SettingsView: View {
                                                        let iconFiles = primaryIconsDictionary["CFBundleIconFiles"] as? [String],
                                                        let lastIcon = iconFiles.last {
                                                         Image(uiImage: UIImage(named: lastIcon) ?? UIImage())
+                                                            .antialiased(true)
                                                             .resizable()
                                                             .scaledToFit()
                                                     } else {
@@ -151,8 +152,6 @@ struct SettingsView: View {
                                                 .cornerRadius(20)
                                                 .shadow(radius: 5)
                                                 .padding(.top, 40)
-                                                // 确保最大尺寸不超过512px
-                                                .frame(maxWidth: 512, maxHeight: 512)
                                                 
                                                 // 应用名称和版本信息
                                                 VStack(spacing: 8) {
@@ -281,12 +280,4 @@ struct SettingsView: View {
             }
         }
     }
-}
-
-// 为 LLMProvider 添加 Identifiable 支持
-//extension LLMProvider: Identifiable { }
-
-#Preview {
-    SettingsView()
-        .environmentObject(AppState())
 }
