@@ -27,6 +27,11 @@ struct TranslatorApp: App {
                         appState.selectedTab = 0
                     case "paste":
                         appState.selectedTab = 0
+                        NotificationCenter.default.post(
+                            name: Notification.Name("PerformReadingClipboard"),
+                            object: nil,
+                            userInfo: nil
+                        )
                     case "settings":
                         appState.selectedTab = 2
                     case "history":
@@ -34,6 +39,7 @@ struct TranslatorApp: App {
                     default:
                         appState.selectedTab = 0
                     }
+                    
                 }
                 .onAppear {
                     // 设置全局UI样式

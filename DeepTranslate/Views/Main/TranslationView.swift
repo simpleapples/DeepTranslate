@@ -59,6 +59,9 @@ struct TranslationView: View {
                                 Text(sourceLanguage.name)
                                     .font(.system(size: 16))
                                     .fontWeight(.semibold)
+                                    .lineLimit(1)           // 限制为单行
+                                    .truncationMode(.tail)  // 文本过长时在尾部显示省略号
+                                    .allowsTightening(true) // 允许字符间距微调以适应空间
                                 
                                 Image(systemName: "chevron.down")
                                     .font(.subheadline)
@@ -88,7 +91,6 @@ struct TranslationView: View {
                         .padding(.vertical, 10)
                         .padding(.horizontal, 10)
                         
-                        // 目标语言选择
                         Button(action: {
                             selectingSource = false
                             showingLanguageSelector = true
@@ -97,6 +99,9 @@ struct TranslationView: View {
                                 Text(targetLanguage.name)
                                     .font(.system(size: 16))
                                     .fontWeight(.semibold)
+                                    .lineLimit(1)           // 限制为单行
+                                    .truncationMode(.tail)  // 文本过长时在尾部显示省略号
+                                    .allowsTightening(true) // 允许字符间距微调以适应空间
                                 
                                 Image(systemName: "chevron.down")
                                     .font(.subheadline)
@@ -193,6 +198,15 @@ struct TranslationView: View {
                                         Image(systemName: autoDetectLanguage ? "text.magnifyingglass" : "slash.circle")
                                             .font(.system(size: 20))
                                             .foregroundColor(autoDetectLanguage ? .blue : .gray)
+                                    }
+                                    
+                                    // 读取剪贴板按钮
+                                    Button(action: {
+                                        handleClipboardContent()
+                                    }) {
+                                        Image(systemName: "doc.on.clipboard")
+                                            .font(.system(size: 18))
+                                            .foregroundColor(.blue)
                                     }
                                     
                                     // 朗读按钮 - 源文本
@@ -379,10 +393,21 @@ struct TranslationView: View {
                     // 不需要使用 [weak self]，因为 TranslationView 是结构体
                     handleSharedTranslation(notification: notification)
                 }
+            
+            // 添加剪贴板处理的观察者
+            NotificationCenter.default.addObserver(
+                forName: Notification.Name("PerformReadingClipboard"),
+                object: nil,
+                queue: .main
+            ) { _ in
+                handleClipboardContent()
+            }
         }
+        
         .onDisappear {
             // 移除通知观察者
             NotificationCenter.default.removeObserver(self, name: Notification.Name("PerformTranslation"), object: nil)
+            NotificationCenter.default.removeObserver(self, name: Notification.Name("PerformReadingClipboard"), object: nil)
 
             // 取消任何正在进行的任务
             textChangeTask?.cancel()
@@ -634,5 +659,25 @@ struct TranslationView: View {
         
         // 触发翻译
         translateText()
+    }
+    
+    // 添加处理剪贴板内容的方法
+    private func handleClipboardContent() {
+        // 请求访问剪贴板
+        if let clipboardText = UIPasteboard.general.string, !clipboardText.isEmpty {
+            // 更新源文本为剪贴板内容
+            sourceText = clipboardText
+            
+            // 如果开启了自动检测功能，触发文本变化处理
+            if autoDetectLanguage && clipboardText.count >= 5 {
+                handleTextChange(clipboardText)
+            }
+            
+            // 延迟一点时间以便可能的语言检测完成
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                // 自动触发翻译
+                translateText()
+            }
+        }
     }
 }

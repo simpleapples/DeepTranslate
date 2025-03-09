@@ -1,0 +1,3 @@
+.gitignore
+DeepTranslate.xcodeproj/xcshareddata/*
+DeepTranslate.xcodeproj/xcuserdata/*
