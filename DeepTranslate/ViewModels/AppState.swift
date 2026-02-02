@@ -11,7 +11,7 @@ import Combine
 class AppState: ObservableObject {
     @Published var providers: [LLMProvider] {
         didSet {
-            saveProviders()
+            saveProviders(providers)
         }
     }
     
@@ -19,19 +19,25 @@ class AppState: ObservableObject {
     
     @Published var selectedProviderIndex: Int {
         didSet {
-            let defaults = UserDefaults(suiteName: "group.simpleapples.deeptranslate")
-            if let defaults = defaults {
-                defaults.set(selectedProviderIndex, forKey: "selectedProviderIndex")
+            let index = selectedProviderIndex
+            DispatchQueue.global(qos: .background).async {
+                let defaults = UserDefaults(suiteName: "group.simpleapples.deeptranslate")
+                if let defaults = defaults {
+                    defaults.set(index, forKey: "selectedProviderIndex")
+                }
             }
         }
     }
     
     @Published var sourceLanguage: Language {
         didSet {
-            if let encoded = try? JSONEncoder().encode(sourceLanguage) {
-                let defaults = UserDefaults(suiteName: "group.simpleapples.deeptranslate")
-                if let defaults = defaults {
-                    defaults.set(encoded, forKey: "sourceLanguage")
+            let language = sourceLanguage
+            DispatchQueue.global(qos: .background).async {
+                if let encoded = try? JSONEncoder().encode(language) {
+                    let defaults = UserDefaults(suiteName: "group.simpleapples.deeptranslate")
+                    if let defaults = defaults {
+                        defaults.set(encoded, forKey: "sourceLanguage")
+                    }
                 }
             }
         }
@@ -39,10 +45,13 @@ class AppState: ObservableObject {
     
     @Published var targetLanguage: Language {
         didSet {
-            if let encoded = try? JSONEncoder().encode(targetLanguage) {
-                let defaults = UserDefaults(suiteName: "group.simpleapples.deeptranslate")
-                if let defaults = defaults {
-                    defaults.set(encoded, forKey: "targetLanguage")
+            let language = targetLanguage
+            DispatchQueue.global(qos: .background).async {
+                if let encoded = try? JSONEncoder().encode(language) {
+                    let defaults = UserDefaults(suiteName: "group.simpleapples.deeptranslate")
+                    if let defaults = defaults {
+                        defaults.set(encoded, forKey: "targetLanguage")
+                    }
                 }
             }
         }
@@ -50,16 +59,19 @@ class AppState: ObservableObject {
     
     @Published var translationHistory: [TranslationResult] = [] {
         didSet {
-            saveHistory()
+            saveHistory(translationHistory)
         }
     }
     
     // 添加自动语言检测设置
     @Published var autoDetectLanguage: Bool {
         didSet {
-            let defaults = UserDefaults(suiteName: "group.simpleapples.deeptranslate")
-            if let defaults = defaults {
-                defaults.set(autoDetectLanguage, forKey: "autoDetectLanguage")
+            let value = autoDetectLanguage
+            DispatchQueue.global(qos: .background).async {
+                let defaults = UserDefaults(suiteName: "group.simpleapples.deeptranslate")
+                if let defaults = defaults {
+                    defaults.set(value, forKey: "autoDetectLanguage")
+                }
             }
         }
     }
@@ -159,11 +171,13 @@ class AppState: ObservableObject {
     }
     
     // 保存提供商配置到UserDefaults
-    private func saveProviders() {
-        if let encoded = try? JSONEncoder().encode(providers) {
-            let defaults = UserDefaults(suiteName: "group.simpleapples.deeptranslate")
-            if let defaults = defaults {
-                defaults.set(encoded, forKey: "llmProviders")
+    private func saveProviders(_ providers: [LLMProvider]) {
+        DispatchQueue.global(qos: .background).async {
+            if let encoded = try? JSONEncoder().encode(providers) {
+                let defaults = UserDefaults(suiteName: "group.simpleapples.deeptranslate")
+                if let defaults = defaults {
+                    defaults.set(encoded, forKey: "llmProviders")
+                }
             }
         }
     }
@@ -176,26 +190,28 @@ class AppState: ObservableObject {
             translationHistory.removeLast()
         }
         
-        saveHistory()
+        saveHistory(translationHistory)
     }
     
     // 清除历史记录
     func clearHistory() {
         translationHistory.removeAll()
-        saveHistory()
+        saveHistory(translationHistory)
     }
     
     // 保存历史记录
-    private func saveHistory() {
-        do {
-            let encoder = JSONEncoder()
-            let data = try encoder.encode(translationHistory)
-            let defaults = UserDefaults(suiteName: "group.simpleapples.deeptranslate")
-            if let defaults = defaults {
-                defaults.set(data, forKey: "translationHistory")
+    private func saveHistory(_ history: [TranslationResult]) {
+        DispatchQueue.global(qos: .background).async {
+            do {
+                let encoder = JSONEncoder()
+                let data = try encoder.encode(history)
+                let defaults = UserDefaults(suiteName: "group.simpleapples.deeptranslate")
+                if let defaults = defaults {
+                    defaults.set(data, forKey: "translationHistory")
+                }
+            } catch {
+                print("保存历史记录失败: \(error.localizedDescription)")
             }
-        } catch {
-            print("保存历史记录失败: \(error.localizedDescription)")
         }
     }
     

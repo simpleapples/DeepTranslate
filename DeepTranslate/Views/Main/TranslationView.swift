@@ -383,32 +383,8 @@ struct TranslationView: View {
             // 清理任何可能存在的文本变化任务
             textChangeTask?.cancel()
             textChangeTask = nil
-            
-            // 添加通知观察者
-            NotificationCenter.default.addObserver(
-                    forName: Notification.Name("PerformTranslation"),
-                    object: nil,
-                    queue: .main
-                ) { notification in
-                    // 不需要使用 [weak self]，因为 TranslationView 是结构体
-                    handleSharedTranslation(notification: notification)
-                }
-            
-            // 添加剪贴板处理的观察者
-            NotificationCenter.default.addObserver(
-                forName: Notification.Name("PerformReadingClipboard"),
-                object: nil,
-                queue: .main
-            ) { _ in
-                handleClipboardContent()
-            }
         }
-        
         .onDisappear {
-            // 移除通知观察者
-            NotificationCenter.default.removeObserver(self, name: Notification.Name("PerformTranslation"), object: nil)
-            NotificationCenter.default.removeObserver(self, name: Notification.Name("PerformReadingClipboard"), object: nil)
-
             // 取消任何正在进行的任务
             textChangeTask?.cancel()
             textChangeTask = nil
@@ -417,6 +393,13 @@ struct TranslationView: View {
             if translationService.isSpeaking {
                 translationService.stopSpeaking()
             }
+        }
+        // 使用 onReceive 自动管理通知及其生命周期
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("PerformTranslation"))) { notification in
+            handleSharedTranslation(notification: notification)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("PerformReadingClipboard"))) { _ in
+            handleClipboardContent()
         }
         .sheet(isPresented: $showingLanguageSelector) {
             LanguageSelectorView(
