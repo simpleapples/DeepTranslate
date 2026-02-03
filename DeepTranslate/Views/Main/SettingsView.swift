@@ -9,9 +9,8 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
-    @State private var showAddProvider = false
     @State private var editingProvider: LLMProvider? = nil
-    @AppStorage("autoDetectLanguage") private var autoDetectLanguage = true
+
     
     let appearanceOptions = ["浅色", "深色", "系统"]
     let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -35,13 +34,7 @@ struct SettingsView: View {
                                 Text("LLM服务提供商")
                                     .font(.headline)
                                 Spacer()
-                                Button(action: {
-                                    showAddProvider = true
-                                }) {
-                                    Label("添加", systemImage: "plus")
-                                        .font(.subheadline)
-                                        .foregroundColor(AppColors.accent)
-                                }
+                                // 用户不允许添加新的提供商
                             }
                             .padding(.horizontal)
                             
@@ -63,36 +56,21 @@ struct SettingsView: View {
                         .padding(.vertical)
                         
                         // 应用设置
+                        // 暂时移除自动检测语言开关，因为已集成到语言选择器中
+                        /*
                         VStack(alignment: .leading, spacing: 12) {
                             Text("应用设置")
-                                .font(.headline)
-                                .padding(.horizontal)
+                            .font(.headline)
+                            .padding(.horizontal)
                             
                             VStack(spacing: 0) {
                                 // 自动检测语言开关
-                                Toggle(isOn: $autoDetectLanguage) {
-                                    HStack {
-                                        Image(systemName: "text.magnifyingglass")
-                                            .frame(width: 30)
-                                            .foregroundColor(AppColors.accent)
-                                        
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text("自动检测语言")
-                                            
-                                            Text("输入文本后自动识别源语言")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                        }
-                                    }
-                                }
-                                .padding()
-                                .background(AppColors.cardBackground)
-                                .cornerRadius(12)
-                                .tint(AppColors.accent)
+                                ...
                             }
                             .padding(.horizontal)
                         }
                         .padding(.vertical)
+                        */
                         
                         // 关于应用
                         VStack(alignment: .leading, spacing: 12) {
@@ -250,22 +228,17 @@ struct SettingsView: View {
             .navigationTitle("设置")
             .navigationBarTitleDisplayMode(.inline)
         }
-        .sheet(isPresented: $showAddProvider) {
-            AddProviderView(onSave: { provider in
-                appState.addProvider(provider)
-            })
-        }
+//        .sheet(isPresented: $showAddProvider) {
+//            AddProviderView(onSave: { provider in
+//                appState.addProvider(provider)
+//            })
+//        }
         // 使用独立的sheet修饰符，确保编辑提供商的sheet是独立的
         .sheet(item: $editingProvider) { provider in
             EditProviderView(
                 provider: provider,
                 onSave: { updatedProvider in
                     appState.updateProvider(updatedProvider)
-                },
-                onDelete: {
-                    if let index = appState.providers.firstIndex(where: { $0.id == provider.id }) {
-                        appState.removeProvider(at: index)
-                    }
                 }
             )
         }
