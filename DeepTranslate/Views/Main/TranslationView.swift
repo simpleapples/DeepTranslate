@@ -112,15 +112,7 @@ struct TranslationView: View {
                         VStack(spacing: 20) {
                             // 输入区域
                             VStack(spacing: 0) {
-                                // 源语言标签
-                                HStack {
-                                    Text(sourceLanguage.name)
-                                        .font(.headline)
-                                        .foregroundColor(.gray)
-                                    Spacer()
-                                }
-                                .padding(.horizontal)
-                                .padding(.vertical, 10)
+
                                 
                                 // 输入框和占位符
                                 // 输入区域 - 让光标可见但保持占位文本功能
@@ -246,16 +238,7 @@ struct TranslationView: View {
                             // 翻译结果区域
                             if !translatedText.isEmpty {
                                 VStack(alignment: .leading, spacing: 0) {
-                                    // 目标语言标签
-                                    HStack {
-                                        Text(targetLanguage.name)
-                                            .font(.headline)
-                                            .foregroundColor(.gray)
-                                            .padding(.horizontal)
-                                            .padding(.vertical, 10)
-                                        
-                                        Spacer()
-                                    }
+
                                     
                                     Text(translatedText)
                                         .font(.system(size: 18))
