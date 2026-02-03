@@ -12,6 +12,7 @@ struct HistoryView: View {
     @EnvironmentObject private var translationService: TranslationService
     @State private var selectedResult: TranslationResult?
     @State private var searchText = ""
+    @State private var showClearConfirmation = false
     
     var filteredHistory: [TranslationResult] {
         if searchText.isEmpty {
@@ -152,7 +153,7 @@ struct HistoryView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        appState.clearHistory()
+                        showClearConfirmation = true
                     }) {
                         Text("清除")
                             .foregroundColor(AppColors.accent)
@@ -160,6 +161,16 @@ struct HistoryView: View {
                     }
                     .disabled(appState.translationHistory.isEmpty)
                 }
+            }
+            .alert(isPresented: $showClearConfirmation) {
+                Alert(
+                    title: Text("清除历史记录"),
+                    message: Text("确定要清除所有翻译历史记录吗？此操作无法撤销。"),
+                    primaryButton: .destructive(Text("清除")) {
+                        appState.clearHistory()
+                    },
+                    secondaryButton: .cancel(Text("取消"))
+                )
             }
             .sheet(item: $selectedResult) { result in
                 TranslationDetailView(result: result)
