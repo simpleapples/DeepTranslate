@@ -40,72 +40,73 @@ struct TranslationView: View {
                 
                 VStack(spacing: 0) {
                     // 语言选择区域
-                    HStack(spacing: 0) {
+
+                    HStack(spacing: 16) {
                         // 源语言选择
                         Button(action: {
                             selectingSource = true
                             showingLanguageSelector = true
                         }) {
-                            HStack {
+                            HStack(spacing: 6) {
                                 Text(sourceLanguage.name)
-                                    .font(.system(size: 16))
+                                    .font(.headline)
                                     .fontWeight(.semibold)
-                                    .lineLimit(1)           // 限制为单行
-                                    .truncationMode(.tail)  // 文本过长时在尾部显示省略号
-                                    .allowsTightening(true) // 允许字符间距微调以适应空间
+                                    .lineLimit(1)
                                 
                                 Image(systemName: "chevron.down")
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.secondary)
                             }
-                            .padding(.vertical, 10)
-                            .padding(.horizontal, 20)
-                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 16)
                             .background(AppColors.cardBackground)
-                            .cornerRadius(12)
+                            .clipShape(Capsule())
+                            .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
                         }
+                        .foregroundColor(.primary)
                         
                         // 语言交换按钮
                         Button(action: {
-                            swapLanguages()
-                        }) {
-                            ZStack {
-                                Circle()
-                                    .fill(AppColors.cardBackground)
-                                    .frame(width: 40, height: 40)
-                                
-                                Image(systemName: "arrow.left.arrow.right")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.blue)
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                swapLanguages()
                             }
+                        }) {
+                            Image(systemName: "arrow.right.arrow.left")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.secondary)
+                                .padding(8)
+                                .background(AppColors.cardBackground.opacity(0.5))
+                                .clipShape(Circle())
                         }
-                        .padding(.vertical, 10)
-                        .padding(.horizontal, 10)
                         
+                        // 目标语言选择
                         Button(action: {
                             selectingSource = false
                             showingLanguageSelector = true
                         }) {
-                            HStack {
+                            HStack(spacing: 6) {
                                 Text(targetLanguage.name)
-                                    .font(.system(size: 16))
+                                    .font(.headline)
                                     .fontWeight(.semibold)
-                                    .lineLimit(1)           // 限制为单行
-                                    .truncationMode(.tail)  // 文本过长时在尾部显示省略号
-                                    .allowsTightening(true) // 允许字符间距微调以适应空间
+                                    .lineLimit(1)
                                 
                                 Image(systemName: "chevron.down")
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.secondary)
                             }
-                            .padding(.vertical, 10)
-                            .padding(.horizontal, 20)
-                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 16)
                             .background(AppColors.cardBackground)
-                            .cornerRadius(12)
+                            .clipShape(Capsule())
+                            .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
                         }
+                        .foregroundColor(.primary)
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+                    .padding(.bottom, 20)
                     
                     ScrollView {
                         VStack(spacing: 20) {
@@ -184,14 +185,19 @@ struct TranslationView: View {
                                 .padding(.horizontal)
                                 .padding(.vertical, 10)
                             }
+                            .padding(.horizontal)
+                            .padding(.vertical, 10)
                             .background(AppColors.cardBackground)
-                            .cornerRadius(12)
+                            .cornerRadius(16)
+                            .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
                             .padding(.horizontal)
                             
                             
                             
                             // 翻译按钮
                             Button(action: {
+                                let generator = UIImpactFeedbackGenerator(style: .medium)
+                                generator.impactOccurred()
                                 translateText()
                             }) {
                                 if translationService.isTranslating {
@@ -206,15 +212,17 @@ struct TranslationView: View {
                                     .padding()
                                     .background(Color.blue)
                                     .foregroundColor(.white)
-                                    .cornerRadius(12)
-                                } else if !sourceText.isEmpty {
+                                    .cornerRadius(16)
+                                    .shadow(color: Color.blue.opacity(0.3), radius: 5, x: 0, y: 3)
+                                } else {
                                     Text("翻译")
                                         .font(.headline)
                                         .frame(maxWidth: .infinity)
                                         .padding()
-                                        .background(Color.blue)
+                                        .background(sourceText.isEmpty ? Color.gray.opacity(0.3) : Color.blue)
                                         .foregroundColor(.white)
-                                        .cornerRadius(12)
+                                        .cornerRadius(16)
+                                        .shadow(color: sourceText.isEmpty ? Color.clear : Color.blue.opacity(0.3), radius: 5, x: 0, y: 3)
                                 }
                             }
                             .disabled(sourceText.isEmpty || translationService.isTranslating)
@@ -251,7 +259,7 @@ struct TranslationView: View {
                                     
                                     Text(translatedText)
                                         .font(.system(size: 18))
-                                        .foregroundColor(.blue)
+                                        .foregroundColor(.primary)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding()
                                         .padding(.bottom, 10)
@@ -284,7 +292,8 @@ struct TranslationView: View {
                                     .padding(.horizontal)
                                 }
                                 .background(AppColors.cardBackground)
-                                .cornerRadius(12)
+                                .cornerRadius(16)
+                                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
                                 .padding(.horizontal)
                             }
                         }

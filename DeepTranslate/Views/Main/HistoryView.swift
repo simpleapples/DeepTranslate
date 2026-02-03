@@ -143,7 +143,7 @@ struct HistoryView: View {
                                     deleteItems(at: indexSet)
                                 }
                             }
-                            .listStyle(PlainListStyle())
+                            .listStyle(InsetGroupedListStyle())
                         }
                     }
                 }
