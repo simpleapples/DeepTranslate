@@ -37,4 +37,6 @@ struct Language: Identifiable, Hashable, Codable {
         Language(name: "Tiếng Việt", code: "vi", flag: "🇻🇳"),
         Language(name: "Nederlands", code: "nl", flag: "🇳🇱")
     ]
+    
+    static let auto = Language(name: "自动检测", code: "auto", flag: "✨")
 }

@@ -32,15 +32,6 @@ struct TranslationView: View {
     // 添加FocusState来管理输入框焦点
     @FocusState private var isInputFocused: Bool
     
-    // 语言检测相关
-    @State private var detectedLanguage: Language? = nil
-    @State private var showDetectedLanguage = false
-    @State private var isDetecting = false
-    @AppStorage("autoDetectLanguage") private var autoDetectLanguage = true
-    
-    // 异步任务跟踪
-    @State private var textChangeTask: Task<Void, Never>? = nil
-    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -120,26 +111,12 @@ struct TranslationView: View {
                         VStack(spacing: 20) {
                             // 输入区域
                             VStack(spacing: 0) {
-                                // 源语言标签与检测状态
+                                // 源语言标签
                                 HStack {
                                     Text(sourceLanguage.name)
                                         .font(.headline)
                                         .foregroundColor(.gray)
-                                    
-                                    if isDetecting && autoDetectLanguage {
-                                        ProgressView()
-                                            .progressViewStyle(CircularProgressViewStyle(tint: .accentColor))
-                                            .scaleEffect(0.7)
-                                            .padding(.leading, 4)
-                                    }
                                     Spacer()
-                                    
-                                    if autoDetectLanguage {
-                                        
-                                        Text("自动检测已开启")
-                                            .font(.caption)
-                                            .foregroundColor(AppColors.textSecondary)
-                                    }
                                 }
                                 .padding(.horizontal)
                                 .padding(.vertical, 10)
@@ -153,9 +130,6 @@ struct TranslationView: View {
                                         .background(Color.clear)
                                         .font(.system(size: 18))
                                         .focused($isInputFocused)
-                                        .onChange(of: sourceText) { newValue in
-                                            handleTextChange(newValue)
-                                        }
                                     
                                     if sourceText.isEmpty && !isInputFocused {
                                         Text("输入文本...")
@@ -184,21 +158,6 @@ struct TranslationView: View {
                                     }
                                     
                                     Spacer()
-                                    
-                                    // 自动检测开关
-                                    Button(action: {
-                                        autoDetectLanguage.toggle()
-                                        if !autoDetectLanguage {
-                                            showDetectedLanguage = false
-                                            isDetecting = false
-                                        } else if !sourceText.isEmpty && sourceText.count >= 5 {
-                                            handleTextChange(sourceText)
-                                        }
-                                    }) {
-                                        Image(systemName: autoDetectLanguage ? "text.magnifyingglass" : "slash.circle")
-                                            .font(.system(size: 20))
-                                            .foregroundColor(autoDetectLanguage ? .blue : .gray)
-                                    }
                                     
                                     // 读取剪贴板按钮
                                     Button(action: {
@@ -276,39 +235,6 @@ struct TranslationView: View {
                                 .padding(.horizontal)
                             }
                             
-                            // 语言检测提示
-                            if showDetectedLanguage, let detected = detectedLanguage {
-                                HStack {
-                                    Image(systemName: "text.magnifyingglass")
-                                        .foregroundColor(.blue)
-                                        .padding(.trailing, 4)
-                                    
-                                    Text("检测到语言：\(detected.name)")
-                                        .font(.subheadline)
-                                        .foregroundColor(AppColors.textSecondary)
-                                    
-                                    Spacer()
-                                    
-                                    Button(action: {
-                                        applyDetectedLanguage()
-                                    }) {
-                                        Text("应用")
-                                            .font(.subheadline)
-                                            .padding(.horizontal, 16)
-                                            .padding(.vertical, 4)
-                                            .background(Color.blue)
-                                            .foregroundColor(.white)
-                                            .cornerRadius(12)
-                                    }
-                                }
-                                .padding()
-                                .background(AppColors.cardBackground)
-                                .cornerRadius(12)
-                                .padding(.horizontal)
-                                .animation(.easeInOut(duration: 0.2), value: showDetectedLanguage)
-                                .transition(.opacity)
-                            }
-                            
                             // 翻译结果区域
                             if !translatedText.isEmpty {
                                 VStack(alignment: .leading, spacing: 0) {
@@ -380,15 +306,9 @@ struct TranslationView: View {
             }
         }
         .onAppear {
-            // 清理任何可能存在的文本变化任务
-            textChangeTask?.cancel()
-            textChangeTask = nil
+            // 清理任务 - 暂时没有需要清理的任务，保留结构
         }
         .onDisappear {
-            // 取消任何正在进行的任务
-            textChangeTask?.cancel()
-            textChangeTask = nil
-            
             // 确保停止朗读
             if translationService.isSpeaking {
                 translationService.stopSpeaking()
@@ -449,82 +369,6 @@ struct TranslationView: View {
         }
     }
     
-    // MARK: - 文本变化处理
-    
-    private func handleTextChange(_ newText: String) {
-        // 取消之前的任务
-        textChangeTask?.cancel()
-        textChangeTask = nil
-        
-        // 如果自动检测关闭或文本太短，则不进行检测
-        if !autoDetectLanguage || newText.count < 5 {
-            isDetecting = false
-            showDetectedLanguage = false
-            return
-        }
-        
-        // 设置正在检测状态
-        isDetecting = true
-        
-        // 创建新任务
-        textChangeTask = Task {
-            do {
-                // 防抖：等待800毫秒
-                try await Task.sleep(nanoseconds: 800_000_000)
-                
-                // 检查任务是否被取消
-                try Task.checkCancellation()
-                
-                // 执行语言检测
-                await detectLanguage(for: newText)
-                
-                // 检测完成后更新状态
-                await MainActor.run {
-                    isDetecting = false
-                }
-            } catch {
-                // 任务被取消或出错
-                await MainActor.run {
-                    isDetecting = false
-                }
-            }
-        }
-    }
-    
-    // MARK: - 语言检测
-    
-    private func detectLanguage(for text: String) async {
-        guard !text.isEmpty, text.count >= 5, autoDetectLanguage else {
-            await MainActor.run {
-                showDetectedLanguage = false
-            }
-            return
-        }
-        
-        // 在分离的任务中进行检测，避免阻塞UI
-        let detectedInfo = await Task.detached(priority: .userInitiated) { () -> (Language?, Bool) in
-            if let detectedCode = LanguageDetectionService.detectLanguage(for: text),
-               let detected = LanguageDetectionService.findLanguage(code: detectedCode) {
-                return (detected, true)
-            }
-            return (nil, false)
-        }.value
-        
-        // 在主线程更新UI
-        await MainActor.run {
-            if let detected = detectedInfo.0, detectedInfo.1 {
-                // 只有当检测到的语言与当前选择的不同时才显示提示
-                if detected.id != sourceLanguage.id {
-                    detectedLanguage = detected
-                    showDetectedLanguage = true
-                } else {
-                    showDetectedLanguage = false
-                }
-            } else {
-                showDetectedLanguage = false
-            }
-        }
-    }
     
     // MARK: - 辅助方法
     
@@ -550,14 +394,25 @@ struct TranslationView: View {
         sourceText = ""
         translatedText = ""
         error = nil
-        showDetectedLanguage = false
-        isDetecting = false
     }
     
     private func swapLanguages() {
         // 如果正在朗读，停止朗读
         if translationService.isSpeaking {
             translationService.stopSpeaking()
+        }
+        
+        // 如果源语言是Auto，不允许交换，或者交换后目标变成Auto（这应该被阻止）
+        // 这里我们简单规定：如果源是Auto，交换时先把它变成默认语言或者不做操作？
+        // 通常交换意味着 A -> B 变成 B -> A
+        // 如果是 Auto -> B， 交换后变成 B -> Auto？目标语言通常不支持Auto
+        // 所以如果源是Auto，我们可能需要先检测出语言再交换，或者提示用户
+        
+        if sourceLanguage.code == "auto" {
+             // 如果当前是自动检测，尝试检测后再交换，或者不做任何事
+             // 为了简单起见，如果是自动检测，暂时禁止交换，或者交换后源语言变为目标语言，目标语言变为检测到的（如果已翻译）
+             // 让我们简单点：如果源是Auto，点击交换按钮时，如果已经有翻译结果且知道语言，就用那个。否则不做。
+             return
         }
         
         let temp = sourceLanguage
@@ -571,38 +426,77 @@ struct TranslationView: View {
         }
     }
     
-    private func applyDetectedLanguage() {
-        guard let detected = detectedLanguage, detected.id != sourceLanguage.id else {
-            return
-        }
-        
-        // 如果目标语言与检测到的语言相同，则自动交换
-        if detected.id == targetLanguage.id {
-            swapLanguages()
-        } else {
-            sourceLanguage = detected
-        }
-        
-        showDetectedLanguage = false
-    }
-    
     private func translateText() {
         // 隐藏键盘
         hideKeyboard()
         isInputFocused = false
         isEditing = false
         
-        // 在翻译前检测语言并应用
-        if autoDetectLanguage && !sourceText.isEmpty && showDetectedLanguage {
-            applyDetectedLanguage()
-        }
-        
         Task {
             do {
+                // 确定实际的源语言
+                var actualSourceLanguage = sourceLanguage
+                
+                // 如果是自动检测
+                if sourceLanguage.code == "auto" {
+                    if let code = LanguageDetectionService.detectLanguage(for: sourceText),
+                       let detected = LanguageDetectionService.findLanguage(code: code) {
+                        actualSourceLanguage = detected
+                    } else {
+                        // 降级策略：默认为英语
+                        actualSourceLanguage = Language.supportedLanguages.first { $0.code == "en" } ?? sourceLanguage
+                    }
+                }
+                
+                // 确定实际的目标语言
+                var actualTargetLanguage = targetLanguage
+                
+                if targetLanguage.code == "auto" {
+                    // 获取系统语言代码 - 使用更兼容的方式
+                    let systemLocale = Locale.current
+                    let systemLangCode = systemLocale.languageCode ?? "en" // 使用languageCode属性，兼容性更好
+                    
+                    // 尝试匹配系统语言到我们需要支持的语言
+                    let matchedSystemLang = Language.supportedLanguages.first { lang in
+                        systemLangCode.lowercased().starts(with: lang.code.split(separator: "-")[0].lowercased())
+                    } ?? Language.supportedLanguages.first { $0.code == "en" }!
+                    
+                    // 智能逻辑：
+                    // 1. 如果源语言(实际) != 系统语言 -> 目标 = 系统语言
+                    // 2. 如果源语言(实际) == 系统语言 -> 目标 = 英语 (作为通用Fallback)
+                    
+                    let sourceBase = actualSourceLanguage.code.split(separator: "-")[0].lowercased()
+                    let systemBase = matchedSystemLang.code.split(separator: "-")[0].lowercased()
+                    
+                    if sourceBase != systemBase {
+                        actualTargetLanguage = matchedSystemLang
+                    } else {
+                        // 如果源语言就是系统语言，则翻译成英文
+                        actualTargetLanguage = Language.supportedLanguages.first { $0.code == "en" }!
+                    }
+                }
+                
+                // 防止源语言和目标语言完全相同
+                // 确保我们不会传递 "auto" 给服务
+                if actualSourceLanguage.code == "auto" {
+                     actualSourceLanguage = Language.supportedLanguages.first { $0.code == "en" }!
+                }
+                
+                if actualSourceLanguage.code == actualTargetLanguage.code {
+                     // 冲突解决：如果目标是自动推导的，强制切换
+                     if targetLanguage.code == "auto" {
+                         if actualSourceLanguage.code.lowercased().starts(with: "en") {
+                             actualTargetLanguage = Language.supportedLanguages.first { $0.code == "zh-CN" }!
+                         } else {
+                             actualTargetLanguage = Language.supportedLanguages.first { $0.code == "en" }!
+                         }
+                     }
+                }
+                
                 let result = try await translationService.translate(
                     text: sourceText,
-                    from: sourceLanguage,
-                    to: targetLanguage,
+                    from: actualSourceLanguage,
+                    to: actualTargetLanguage,
                     using: appState.activeProvider
                 )
                 
@@ -613,8 +507,8 @@ struct TranslationView: View {
                     let translation = TranslationResult(
                         sourceText: sourceText,
                         translatedText: result,
-                        sourceLanguage: sourceLanguage,
-                        targetLanguage: targetLanguage,
+                        sourceLanguage: actualSourceLanguage,
+                        targetLanguage: actualTargetLanguage,
                         provider: appState.activeProvider.name
                     )
                     appState.addToHistory(result: translation)
@@ -651,13 +545,8 @@ struct TranslationView: View {
             // 更新源文本为剪贴板内容
             sourceText = clipboardText
             
-            // 如果开启了自动检测功能，触发文本变化处理
-            if autoDetectLanguage && clipboardText.count >= 5 {
-                handleTextChange(clipboardText)
-            }
-            
-            // 延迟一点时间以便可能的语言检测完成
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            // 延迟一点时间
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 // 自动触发翻译
                 translateText()
             }
