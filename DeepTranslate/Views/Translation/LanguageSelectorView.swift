@@ -15,9 +15,19 @@ struct LanguageSelectorView: View {
     
     var filteredLanguages: [Language] {
         if searchText.isEmpty {
-            return Language.supportedLanguages
+            var languages = Language.supportedLanguages
+            languages.insert(Language.auto, at: 0)
+            return languages
         } else {
-            return Language.supportedLanguages.filter { language in
+            var languages = Language.supportedLanguages
+            // 如果搜索文本匹配“自动”或“auto”，则把auto也加进去
+            if "自动检测".localizedCaseInsensitiveContains(searchText) ||
+                "auto".localizedCaseInsensitiveContains(searchText) ||
+                Language.auto.flag.contains(searchText) {
+                languages.insert(Language.auto, at: 0)
+            }
+            
+            return languages.filter { language in
                 language.name.localizedCaseInsensitiveContains(searchText) ||
                 language.code.localizedCaseInsensitiveContains(searchText) ||
                 language.flag.contains(searchText)
