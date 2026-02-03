@@ -15,6 +15,8 @@ struct LLMProvider: Identifiable, Hashable, Codable {
     var modelName: String
     var isActive: Bool
     var endpoint: String?
+    var cachedModels: [String]? // 缓存的模型列表
+    var lastFetchDate: Date? // 上次获取模型的时间
     
     enum ProviderType: String, Codable {
         case openai = "OpenAI"
@@ -25,7 +27,7 @@ struct LLMProvider: Identifiable, Hashable, Codable {
         case custom = "自定义"
     }
     
-    init(id: UUID = UUID(), name: String, type: ProviderType, apiKey: String, modelName: String, isActive: Bool, endpoint: String? = nil) {
+    init(id: UUID = UUID(), name: String, type: ProviderType, apiKey: String, modelName: String, isActive: Bool, endpoint: String? = nil, cachedModels: [String]? = nil, lastFetchDate: Date? = nil) {
         self.id = id
         self.name = name
         self.type = type
@@ -33,14 +35,16 @@ struct LLMProvider: Identifiable, Hashable, Codable {
         self.modelName = modelName
         self.isActive = isActive
         self.endpoint = endpoint
+        self.cachedModels = cachedModels
+        self.lastFetchDate = lastFetchDate
     }
     
     static let defaultProviders: [LLMProvider] = [
-        LLMProvider(name: "OpenAI", type: .openai, apiKey: "", modelName: "gpt-4o", isActive: true),
-        LLMProvider(name: "DeepSeek", type: .deepseek, apiKey: "", modelName: "deepseek-chat", isActive: false),
-        LLMProvider(name: "Anthropic", type: .anthropic, apiKey: "", modelName: "claude-3-sonnet", isActive: false),
-        LLMProvider(name: "Gemini", type: .gemini, apiKey: "", modelName: "gemini-pro", isActive: false),
-        LLMProvider(name: "Mistral", type: .mistral, apiKey: "", modelName: "mistral-large", isActive: false)
+        LLMProvider(name: "OpenAI", type: .openai, apiKey: "", modelName: "", isActive: true),
+        LLMProvider(name: "DeepSeek", type: .deepseek, apiKey: "", modelName: "", isActive: false),
+        LLMProvider(name: "Anthropic", type: .anthropic, apiKey: "", modelName: "", isActive: false),
+        LLMProvider(name: "Gemini", type: .gemini, apiKey: "", modelName: "", isActive: false),
+        LLMProvider(name: "Mistral", type: .mistral, apiKey: "", modelName: "", isActive: false)
     ]
     
     // 获取API端点
@@ -53,11 +57,11 @@ struct LLMProvider: Identifiable, Hashable, Codable {
         case .openai:
             return "https://api.openai.com/v1/chat/completions"
         case .deepseek:
-            return "https://api.deepseek.com/v1/chat/completions"
+            return "https://api.deepseek.com/chat/completions"
         case .anthropic:
             return "https://api.anthropic.com/v1/messages"
         case .gemini:
-            return "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
+            return "https://generativelanguage.googleapis.com/v1beta/models/\(modelName):generateContent"
         case .mistral:
             return "https://api.mistral.ai/v1/chat/completions"
         case .custom:

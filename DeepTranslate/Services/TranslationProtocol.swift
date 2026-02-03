@@ -47,4 +47,20 @@ struct GeminiResponse: Codable {
 
 // Mistral and DeepSeek use the same format as OpenAI
 typealias DeepSeekResponse = OpenAIResponse
+
 typealias MistralResponse = OpenAIResponse
+
+struct OpenAIModelListResponse: Codable {
+    struct Model: Codable {
+        let id: String
+    }
+    let data: [Model]
+}
+
+struct GeminiModelListResponse: Codable {
+    struct Model: Codable {
+        let name: String // e.g. "models/gemini-pro"
+        let displayName: String?
+    }
+    let models: [Model]
+}

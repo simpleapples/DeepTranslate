@@ -11,7 +11,6 @@ struct EditProviderView: View {
     // 传入的提供商和回调函数
     let provider: LLMProvider
     let onSave: (LLMProvider) -> Void
-    let onDelete: () -> Void
     
     // 状态变量
     @State private var name: String
@@ -20,18 +19,23 @@ struct EditProviderView: View {
     @State private var isKeyVisible = false
     @State private var modelName: String
     @State private var customEndpoint: String
-    @State private var showDeleteAlert = false
+    // No delete alert needed
     @State private var showErrorAlert = false
     @State private var errorMessage = ""
+    
+    // 动态模型获取
+    @State private var fetchedModels: [String] = []
+    @State private var lastFetchedDate: Date?
+    @State private var isFetchingModels = false
     
     @Environment(\.dismiss) var dismiss
     
     // 初始化函数 - 在这里设置所有状态变量的初始值
-    init(provider: LLMProvider, onSave: @escaping (LLMProvider) -> Void, onDelete: @escaping () -> Void) {
+    init(provider: LLMProvider, onSave: @escaping (LLMProvider) -> Void) {
         print("EditProviderView初始化: \(provider.name)")
         self.provider = provider
         self.onSave = onSave
-        self.onDelete = onDelete
+        // No delete callback
         
         // 初始化状态变量
         _name = State(initialValue: provider.name)
@@ -39,34 +43,37 @@ struct EditProviderView: View {
         _apiKey = State(initialValue: provider.apiKey)
         _modelName = State(initialValue: provider.modelName)
         _customEndpoint = State(initialValue: provider.endpoint ?? "")
+        _fetchedModels = State(initialValue: provider.cachedModels ?? [])
+        _lastFetchedDate = State(initialValue: provider.lastFetchDate)
     }
     
+    
     private var isFormValid: Bool {
-        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        !modelName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        (type != .custom || !customEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        let isNameValid = !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let isModelValid = !modelName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        
+        // 对于自定义类型，API Key可以为空
+        let isKeyValid: Bool
+        if type == .custom {
+            isKeyValid = !customEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        } else {
+            isKeyValid = !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        
+        return isNameValid && isKeyValid && isModelValid
     }
     
     var body: some View {
         NavigationView {
             Form {
                 Section(header: Text("基本信息")) {
-                    TextField("名称", text: $name)
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                    
-                    Picker("类型", selection: $type) {
-                        Text("OpenAI").tag(LLMProvider.ProviderType.openai)
-                        Text("DeepSeek").tag(LLMProvider.ProviderType.deepseek)
-                        Text("Anthropic").tag(LLMProvider.ProviderType.anthropic)
-                        Text("Gemini").tag(LLMProvider.ProviderType.gemini)
-                        Text("Mistral").tag(LLMProvider.ProviderType.mistral)
-                        Text("自定义").tag(LLMProvider.ProviderType.custom)
+                    HStack {
+                        Text("名称")
+                        Spacer()
+                        Text(name)
+                            .foregroundColor(.secondary)
                     }
-                    .onChange(of: type) { _ in
-                        updateModelNameForType()
-                    }
+                    // 类型不再允许修改，已由提供商名称决定
                 }
                 
                 Section(header: Text("API设置")) {
@@ -89,9 +96,62 @@ struct EditProviderView: View {
                         }
                     }
                     
-                    TextField("模型名称", text: $modelName)
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
+                    HStack {
+                        if type == .anthropic {
+                            TextField("模型名称", text: $modelName)
+                                .autocapitalization(.none)
+                                .disableAutocorrection(true)
+                        } else {
+                            Text("模型名称")
+                            Spacer()
+                            
+                            Menu {
+                                Button(action: {
+                                    fetchModels()
+                                }) {
+                                    Label(fetchedModels.isEmpty ? "获取模型列表" : "刷新列表", systemImage: "arrow.triangle.2.circlepath")
+                                }
+                                
+                                Divider()
+                                
+                                if isFetchingModels {
+                                    Text("加载中...")
+                                } else if fetchedModels.isEmpty {
+                                    Text("暂无可用模型")
+                                } else {
+                                    ForEach(fetchedModels, id: \.self) { model in
+                                        Button(action: {
+                                            modelName = model
+                                        }) {
+                                            HStack {
+                                                Text(model)
+                                                if modelName == model {
+                                                    Image(systemName: "checkmark")
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } label: {
+                                HStack {
+                                    Text(modelName.isEmpty ? "点击选择模型" : modelName)
+                                        .foregroundColor(modelName.isEmpty ? .secondary : .primary)
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .onAppear {
+                                // 展开时如果列表为空，或者缓存过期(超过3天)，且(有API Key 或 类型为Custom)，自动获取
+                                if !apiKey.isEmpty || type == .custom {
+                                    if fetchedModels.isEmpty || isCacheExpired {
+                                        print("Cache expired or empty, fetching models...")
+                                        fetchModels()
+                                    }
+                                }
+                            }
+                        }
+                    }
                     
                     if type == .custom {
                         TextField("自定义API端点", text: $customEndpoint)
@@ -149,15 +209,7 @@ struct EditProviderView: View {
                 }
                 
                 Section {
-                    Button(role: .destructive, action: {
-                        showDeleteAlert = true
-                    }) {
-                        HStack {
-                            Spacer()
-                            Text("删除此提供商")
-                            Spacer()
-                        }
-                    }
+                   // Delete button removed
                 }
             }
             .navigationTitle("编辑服务提供商")
@@ -178,15 +230,7 @@ struct EditProviderView: View {
                     .foregroundColor(isFormValid ? .blue : .gray)
                 }
             }
-            .alert("确认删除", isPresented: $showDeleteAlert) {
-                Button("取消", role: .cancel) { }
-                Button("删除", role: .destructive) {
-                    onDelete()
-                    dismiss()
-                }
-            } message: {
-                Text("您确定要删除此服务提供商吗？此操作无法撤销。")
-            }
+            // Delete alert removed
             .alert("错误", isPresented: $showErrorAlert) {
                 Button("确定", role: .cancel) { }
             } message: {
@@ -198,46 +242,9 @@ struct EditProviderView: View {
         }
     }
     
-    // 根据类型更新默认的模型名称
-    private func updateModelNameForType() {
-        // 如果用户更改了类型，并且模型名称尚未手动更改（仍为默认值），则更新它
-        switch type {
-        case .openai:
-            if modelName == defaultModelName(for: provider.type) || modelName.isEmpty {
-                modelName = "gpt-4o"
-            }
-        case .deepseek:
-            if modelName == defaultModelName(for: provider.type) || modelName.isEmpty {
-                modelName = "deepseek-chat"
-            }
-        case .anthropic:
-            if modelName == defaultModelName(for: provider.type) || modelName.isEmpty {
-                modelName = "claude-3-sonnet"
-            }
-        case .gemini:
-            if modelName == defaultModelName(for: provider.type) || modelName.isEmpty {
-                modelName = "gemini-pro"
-            }
-        case .mistral:
-            if modelName == defaultModelName(for: provider.type) || modelName.isEmpty {
-                modelName = "mistral-large"
-            }
-        case .custom:
-            break // 不更改自定义模型名称
-        }
-    }
+
     
-    // 获取特定类型的默认模型名称
-    private func defaultModelName(for type: LLMProvider.ProviderType) -> String {
-        switch type {
-        case .openai: return "gpt-4o"
-        case .deepseek: return "deepseek-chat"
-        case .anthropic: return "claude-3-sonnet"
-        case .gemini: return "gemini-pro"
-        case .mistral: return "mistral-large"
-        case .custom: return ""
-        }
-    }
+
     
     private func saveProvider() {
         do {
@@ -265,7 +272,9 @@ struct EditProviderView: View {
                 apiKey: apiKey.trimmingCharacters(in: .whitespacesAndNewlines),
                 modelName: modelName.trimmingCharacters(in: .whitespacesAndNewlines),
                 isActive: provider.isActive,
-                endpoint: type == .custom ? customEndpoint.trimmingCharacters(in: .whitespacesAndNewlines) : nil
+                endpoint: type == .custom ? customEndpoint.trimmingCharacters(in: .whitespacesAndNewlines) : nil,
+                cachedModels: fetchedModels.isEmpty ? nil : fetchedModels,
+                lastFetchDate: fetchedModels.isEmpty ? nil : lastFetchedDate
             )
             
             // 调用保存回调
@@ -282,6 +291,47 @@ struct EditProviderView: View {
             errorMessage = error.localizedDescription
             showErrorAlert = true
         }
+    }
+    
+    private func fetchModels() {
+        guard !apiKey.isEmpty || type == .custom else {
+            errorMessage = "请先输入API密钥"
+            showErrorAlert = true
+            return
+        }
+        
+        isFetchingModels = true
+        
+        Task {
+            do {
+                let models = try await ModelFetcher.fetchModels(for: type, apiKey: apiKey, customEndpoint: customEndpoint)
+                
+                await MainActor.run {
+                    self.fetchedModels = models
+                    self.lastFetchedDate = Date() // 更新获取时间
+                    self.isFetchingModels = false
+                    
+                    if models.isEmpty {
+                        self.errorMessage = "未找到可用的模型列表，请检查API密钥或手动输入"
+                        self.showErrorAlert = true
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self.isFetchingModels = false
+                    self.errorMessage = "获取失败: \(error.localizedDescription)"
+                    self.showErrorAlert = true
+                }
+            }
+        }
+    }
+    
+    // 检查缓存是否过期 (3天)
+    private var isCacheExpired: Bool {
+        guard let date = lastFetchedDate else { return true }
+        // 3天 = 3 * 24 * 60 * 60 秒
+        // return Date().timeIntervalSince(date) > 10 // For testing
+        return Date().timeIntervalSince(date) > 259200
     }
 }
 
@@ -313,8 +363,7 @@ struct EditProviderView_Previews: PreviewProvider {
                 modelName: "gpt-4o",
                 isActive: true
             ),
-            onSave: { _ in },
-            onDelete: {}
+            onSave: { _ in }
         )
     }
 }
